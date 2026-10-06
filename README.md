@@ -18,3 +18,5 @@
 ## Edge Function 배포
 
 Supabase 대시보드 > Edge Functions > 새 함수 `fetch-blog` 에 `index.ts` 전체를 붙여넣고 Deploy.
+
+사이트: https://tiottu.github.io/mijujijo/
