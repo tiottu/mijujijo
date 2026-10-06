@@ -4,8 +4,8 @@
 
 ## 진행 단계
 
-1. **글 불러오기** (현재) - URL 입력 -> 제목/본문 표시
-2. 오탈자·문장 검수 (Claude API)
+1. 글 불러오기 - URL 입력 -> 제목/본문 표시
+2. **오탈자·문장 검수** (현재, Claude API) - 본문에 표시하고 수정안을 카드로 보여 줌
 3. 핵심 키워드 추출과 제목·구조 개선 제안
 4. 검색량 API 연동
 
@@ -17,6 +17,7 @@
 
 ## Edge Function 배포
 
-Supabase 대시보드 > Edge Functions > 새 함수 `fetch-blog` 에 `index.ts` 전체를 붙여넣고 Deploy.
+Supabase 대시보드 > Edge Functions > `hyper-service` (슬러그는 만든 뒤 못 바꿔서 앱이 이 이름을 부른다) 편집기에 `index.ts` 전체를 붙여넣고 Deploy.
+검수 기능은 Edge Functions > Secrets 에 `ANTHROPIC_API_KEY` 가 있어야 한다. (선택) `CLAUDE_MODEL` 로 모델 변경.
 
 사이트: https://tiottu.github.io/mijujijo/

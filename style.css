@@ -25,5 +25,25 @@ body {
 .status.error { color: var(--err); }
 .result h2 { margin: 8px 0 4px; font-size: 1.25rem; line-height: 1.4; }
 .meta { margin: 0 0 16px; color: var(--muted); font-size: .85rem; }
+.check-btn {
+  width: 100%; padding: 14px; font-size: 1rem; font-weight: 600;
+  color: var(--accent); background: #eff6ff; border: 1px solid var(--accent); border-radius: 10px;
+}
+.check-btn:disabled { opacity: .6; }
+.issues { margin: 8px 0 20px; }
+.issues h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.issue {
+  display: block; margin-bottom: 8px; padding: 12px; color: inherit; text-decoration: none;
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.chip {
+  display: inline-block; margin-bottom: 4px; padding: 0 8px; font-size: .75rem; font-weight: 600;
+  color: var(--accent); background: #eff6ff; border-radius: 99px;
+}
+.fix { word-break: keep-all; overflow-wrap: anywhere; }
+.fix del { color: var(--err); }
+.fix ins { color: #15803d; text-decoration: none; font-weight: 600; }
+.why { margin-top: 2px; color: var(--muted); font-size: .85rem; }
+mark { background: #fef08a; border-radius: 3px; }
 .body { padding-bottom: 40px; }
 .body p { margin: 0 0 .8em; word-break: keep-all; overflow-wrap: anywhere; }

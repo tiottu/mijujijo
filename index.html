@@ -11,7 +11,7 @@
 <body>
   <header class="app-header">
     <h1>B</h1>
-    <p>네이버 블로그 글 주소를 넣으면 글을 불러옵니다</p>
+    <p>네이버 블로그 글 주소를 넣으면 오탈자를 점검해 드려요</p>
   </header>
 
   <main>
@@ -27,6 +27,9 @@
     <section id="result" class="result" hidden>
       <h2 id="title"></h2>
       <p id="meta" class="meta"></p>
+      <button id="check" type="button" class="check-btn">오탈자·문장 검수하기</button>
+      <p id="check-status" class="status" role="status" aria-live="polite"></p>
+      <div id="issues" class="issues" hidden></div>
       <div id="body" class="body"></div>
     </section>
   </main>
