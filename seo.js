@@ -128,6 +128,49 @@ var BSeo = (function () {
       }
     }
 
+    // 이미지·태그 (서버가 meta 를 보내 줄 때만)
+    var m = post.meta;
+    if (!m) {
+      items.push(item("이미지·태그", INFO, "서버 함수를 최신 코드로 Deploy 하면 이미지와 태그도 점검해요."));
+    } else {
+      if (m.images === 0) items.push(item("이미지", BAD, "사진이 한 장도 없어요. 3장 이상을 권장해요."));
+      else if (m.images < 3) items.push(item("이미지", WARN, "사진이 " + m.images + "장이에요. 3장 이상이면 더 좋아요."));
+      else if (m.images <= 20) items.push(item("이미지", GOOD, "사진 " + m.images + "장이 들어 있어요."));
+      else items.push(item("이미지", WARN, "사진이 " + m.images + "장으로 많아요. 모바일에서 느리게 열릴 수 있어요."));
+
+      if (m.images > 0) {
+        if (m.imagesWithAlt === 0) items.push(item("사진 설명", WARN, "사진 설명(대체 텍스트)이 하나도 없어요. 사진을 눌러 설명을 적어 두면 검색에 도움이 돼요."));
+        else if (m.imagesWithAlt < m.images) items.push(item("사진 설명", WARN, "사진 " + m.images + "장 중 " + m.imagesWithAlt + "장에만 설명이 있어요."));
+        else items.push(item("사진 설명", GOOD, "모든 사진에 설명이 있어요."));
+      }
+
+      var tags = m.tags;
+      if (tags === null || tags === undefined) {
+        items.push(item("태그", INFO, "태그를 불러오지 못했어요."));
+      } else if (tags.length === 0) {
+        items.push(item("태그", BAD, "태그가 없어요. 5~10개를 권장해요."));
+      } else if (tags.length < 3) {
+        items.push(item("태그", WARN, "태그가 " + tags.length + "개예요 (" + tags.join(", ") + "). 5~10개를 권장해요."));
+      } else if (tags.length <= 15) {
+        items.push(item("태그", GOOD, "태그 " + tags.length + "개: " + tags.join(", ")));
+      } else {
+        items.push(item("태그", WARN, "태그가 " + tags.length + "개로 많아요. 글과 관련 있는 것만 남겨 보세요."));
+      }
+
+      if (kw && tags && tags.length) {
+        var hit = tags.some(function (t) { return t.toLowerCase().indexOf(kw) >= 0; });
+        items.push(hit
+          ? item("태그에 키워드", GOOD, "태그에 대표 키워드가 들어 있어요.")
+          : item("태그에 키워드", WARN, "태그에 “" + keyword.trim() + "” 가 없어요. 태그에 추가해 보세요."));
+      }
+
+      var extras = [];
+      if (m.videos) extras.push("동영상 " + m.videos);
+      if (m.maps) extras.push("지도 " + m.maps);
+      if (m.links) extras.push("링크 카드 " + m.links);
+      items.push(item("부가 요소", INFO, extras.length ? extras.join(", ") + "개가 들어 있어요." : "동영상·지도·링크 카드는 없어요."));
+    }
+
     // 점수 (INFO 는 제외)
     var scored = items.filter(function (x) { return x.status !== INFO; });
     var pts = scored.reduce(function (s, x) { return s + (x.status === GOOD ? 1 : x.status === WARN ? 0.5 : 0); }, 0);

@@ -97,6 +97,40 @@ function parsePost(html) {
   return { title, paragraphs };
 }
 
+// 본문 컨테이너 안의 이미지·영상·지도·링크 개수. (프로필 사진 등 바깥 이미지는 세지 않는다.)
+function parseMeta(html) {
+  const bIdx = html.indexOf("se-main-container");
+  const area = bIdx >= 0 ? html.slice(bIdx) : html;
+  const imgs = area.match(/<img\b[^>]*class="[^"]*se-image-resource[^"]*"[^>]*>/g) || [];
+  const withAlt = imgs.filter((t) => /\salt="[^"]*[^"\s][^"]*"/.test(t)).length;
+  const count = (re) => (area.match(re) || []).length;
+  return {
+    images: imgs.length,
+    imagesWithAlt: withAlt,
+    videos: count(/se-module-video/g),
+    maps: count(/se-module-map/g),
+    links: count(/se-module-oglink/g) + count(/<a\b[^>]*class="[^"]*se-link[^"]*"/g),
+  };
+}
+
+// 태그 응답: {"taglist":[{"tagName":"%EB%9D%BC..."}]} (태그 여러 개는 쉼표로 이어져 온다)
+function parseTags(body) {
+  try {
+    const data = JSON.parse(body);
+    const out = [];
+    for (const t of data.taglist || []) {
+      const name = decodeURIComponent(String(t.tagName || "").replace(/\+/g, " "));
+      for (const part of name.split(",")) {
+        const v = part.trim();
+        if (v && !out.includes(v)) out.push(v);
+      }
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 // 글자 수 한도 안에 들어가는 문단만 남긴다. (검수 요청의 문단 번호가 화면과 같아야 한다.)
 function trimParagraphs(paragraphs) {
   const kept = [];
@@ -242,12 +276,13 @@ async function loadPost(url) {
   }
   if (!res.ok) return { fail: [`블로그를 불러오지 못했습니다. (${res.status})`, 502] };
 
-  const { title, paragraphs } = parsePost(await res.text());
+  const html = await res.text();
+  const { title, paragraphs } = parsePost(html);
   if (paragraphs.length === 0) {
     return { fail: ["본문을 찾지 못했습니다. 비공개 글이거나 지원하지 않는 형식일 수 있습니다.", 422] };
   }
   const { kept, truncated } = trimParagraphs(paragraphs);
-  return { ref, title, paragraphs: kept, truncated };
+  return { ref, title, paragraphs: kept, truncated, meta: parseMeta(html) };
 }
 
 // @ts-ignore Deno 전용
@@ -278,7 +313,18 @@ if (typeof Deno !== "undefined") {
       truncated: post.truncated,
       length: text.length,
     };
-    if (action === "fetch") return json({ ...base, text });
+    if (action === "fetch") {
+      // 태그는 실패해도 글 불러오기는 되게 한다. (null = 못 읽음, [] = 태그 없음)
+      let tags = null;
+      try {
+        const tr = await fetch(
+          `https://blog.naver.com/BlogTagListInfo.naver?blogId=${encodeURIComponent(post.ref.blogId)}&logNoList=${post.ref.logNo}&logType=mylog`,
+          { headers: { "Referer": `https://m.blog.naver.com/${post.ref.blogId}/${post.ref.logNo}` } },
+        );
+        if (tr.ok) tags = parseTags(await tr.text());
+      } catch { /* 태그 없이 진행 */ }
+      return json({ ...base, text, meta: { ...post.meta, tags } });
+    }
 
     // @ts-ignore
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
