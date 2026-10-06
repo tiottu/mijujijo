@@ -74,15 +74,28 @@ var BSeo = (function () {
     if (paras.length < 5) items.push(item("문단 수", WARN, paras.length + "개뿐이에요. 문단을 나눠 읽기 쉽게 해 보세요."));
     else items.push(item("문단 수", GOOD, paras.length + "개 문단이에요."));
 
-    var longParas = paras.filter(function (p) { return p.length > 300; }).length;
-    if (longParas) items.push(item("긴 문단", WARN, "300자가 넘는 문단이 " + longParas + "개 있어요. 중간에 줄바꿈을 넣어 보세요."));
-    else items.push(item("긴 문단", GOOD, "모든 문단이 300자 이하예요."));
+    // details: 눌렀을 때 보여 줄 해당 문단·문장 목록 ({ text, paragraph })
+    var longParas = [];
+    paras.forEach(function (p, i) { if (p.length > 300) longParas.push({ text: p, paragraph: i }); });
+    if (longParas.length) {
+      var lp = item("긴 문단", WARN, "300자가 넘는 문단이 " + longParas.length + "개 있어요. 중간에 줄바꿈을 넣어 보세요.");
+      lp.details = longParas;
+      items.push(lp);
+    } else items.push(item("긴 문단", GOOD, "모든 문단이 300자 이하예요."));
 
-    // 문장 길이
-    var sentences = text.split(/[.!?。…\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-    var longSent = sentences.filter(function (s) { return s.length > 80; }).length;
-    if (longSent) items.push(item("긴 문장", WARN, "80자가 넘는 문장이 " + longSent + "개 있어요. 나눠 쓰면 읽기 쉬워요."));
-    else items.push(item("긴 문장", GOOD, "너무 긴 문장이 없어요."));
+    // 문장 길이 (문단 안에서 나눠야 어느 문단인지 알 수 있다)
+    var longSent = [];
+    paras.forEach(function (p, i) {
+      p.split(/[.!?。…]+/).forEach(function (s) {
+        s = s.trim();
+        if (s.length > 80) longSent.push({ text: s, paragraph: i });
+      });
+    });
+    if (longSent.length) {
+      var ls = item("긴 문장", WARN, "80자가 넘는 문장이 " + longSent.length + "개 있어요. 나눠 쓰면 읽기 쉬워요.");
+      ls.details = longSent;
+      items.push(ls);
+    } else items.push(item("긴 문장", GOOD, "너무 긴 문장이 없어요."));
 
     // 키워드
     var tops = topWords(text, 10);

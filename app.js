@@ -62,8 +62,20 @@
     issues.forEach(function (it) { (byPara[it.paragraph] = byPara[it.paragraph] || []).push(it); });
     bodyEl.textContent = "";
     post.paragraphs.forEach(function (t, i) {
-      bodyEl.appendChild(renderParagraph(t, byPara[i] || []));
+      var p = renderParagraph(t, byPara[i] || []);
+      p.id = "para-" + i;
+      bodyEl.appendChild(p);
     });
+  }
+
+  // 점검 목록에서 누른 문단으로 이동해 잠깐 표시한다.
+  function flashParagraph(i) {
+    var p = $("para-" + i);
+    if (!p) return;
+    p.scrollIntoView({ behavior: "smooth", block: "center" });
+    p.classList.remove("flash");
+    void p.offsetWidth; // 같은 문단을 다시 눌러도 효과가 다시 나오게
+    p.classList.add("flash");
   }
 
   function renderIssues(issues) {
@@ -132,8 +144,32 @@
       name.textContent = ICON[it.status] + " " + it.label;
       var msg = document.createElement("span");
       msg.textContent = it.msg;
-      li.appendChild(name);
-      li.appendChild(msg);
+
+      if (it.details && it.details.length) {
+        // 눌러서 펼치면 해당 문장이 나오고, 문장을 누르면 본문 위치로 이동한다.
+        var box = document.createElement("details");
+        var sum = document.createElement("summary");
+        sum.appendChild(name);
+        sum.appendChild(msg);
+        box.appendChild(sum);
+        it.details.forEach(function (d) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "detail";
+          var len = document.createElement("small");
+          len.textContent = (d.paragraph + 1) + "번째 문단 · " + d.text.length + "자";
+          var tx = document.createElement("span");
+          tx.textContent = d.text;
+          b.appendChild(len);
+          b.appendChild(tx);
+          b.addEventListener("click", function () { flashParagraph(d.paragraph); });
+          box.appendChild(b);
+        });
+        li.appendChild(box);
+      } else {
+        li.appendChild(name);
+        li.appendChild(msg);
+      }
       list.appendChild(li);
     });
   }

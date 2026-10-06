@@ -48,6 +48,18 @@ body {
 .seo-item { padding: 8px 0; border-top: 1px solid var(--line); font-size: .92rem; }
 .seo-item strong { display: block; }
 .seo-item span { color: var(--muted); }
+.seo-item summary { cursor: pointer; list-style: none; }
+.seo-item summary::-webkit-details-marker { display: none; }
+.seo-item summary::after { content: "눌러서 문장 보기 ▾"; display: block; margin-top: 2px; color: var(--accent); font-size: .8rem; }
+.seo-item details[open] summary::after { content: "접기 ▴"; }
+.detail {
+  display: block; width: 100%; margin-top: 8px; padding: 10px; text-align: left; font: inherit;
+  color: var(--fg); background: #fff; border: 1px solid var(--line); border-radius: 8px;
+}
+.detail small { display: block; margin-bottom: 2px; color: var(--accent); font-size: .75rem; }
+.detail span { color: var(--fg); font-size: .88rem; word-break: keep-all; overflow-wrap: anywhere; }
+.body p.flash { animation: flash 1.6s ease-out; }
+@keyframes flash { 0%, 40% { background: #fef08a; } 100% { background: transparent; } }
 .check-btn {
   width: 100%; padding: 14px; font-size: 1rem; font-weight: 600;
   color: var(--accent); background: #eff6ff; border: 1px solid var(--accent); border-radius: 10px;
