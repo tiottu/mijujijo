@@ -1,0 +1,9 @@
+{
+  "name": "B - 블로그 글 점검",
+  "short_name": "B",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "lang": "ko"
+}

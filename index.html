@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2563eb">
+  <title>B - 블로그 글 점검</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>B</h1>
+    <p>네이버 블로그 글 주소를 넣으면 글을 불러옵니다</p>
+  </header>
+
+  <main>
+    <form id="form" class="url-form">
+      <label for="url">블로그 글 주소</label>
+      <input id="url" type="url" inputmode="url" autocomplete="off"
+             placeholder="https://blog.naver.com/아이디/글번호" required>
+      <button id="submit" type="submit">글 불러오기</button>
+    </form>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+
+    <section id="result" class="result" hidden>
+      <h2 id="title"></h2>
+      <p id="meta" class="meta"></p>
+      <div id="body" class="body"></div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

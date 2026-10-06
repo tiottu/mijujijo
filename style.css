@@ -1,0 +1,29 @@
+:root { --fg: #1f2937; --muted: #6b7280; --accent: #2563eb; --err: #dc2626; --line: #e5e7eb; }
+* { box-sizing: border-box; }
+body {
+  margin: 0 auto; max-width: 640px; min-height: 100vh;
+  padding: 0 16px env(safe-area-inset-bottom);
+  font-family: system-ui, "Malgun Gothic", sans-serif;
+  color: var(--fg); line-height: 1.7;
+}
+.app-header { padding: 28px 0 12px; }
+.app-header h1 { margin: 0; font-size: 1.8rem; color: var(--accent); }
+.app-header p { margin: 2px 0 0; color: var(--muted); font-size: .95rem; }
+.url-form { display: flex; flex-direction: column; gap: 8px; }
+.url-form label { font-weight: 600; font-size: .9rem; }
+.url-form input {
+  width: 100%; padding: 14px; font-size: 16px; /* 16px 미만이면 iOS 가 확대한다 */
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.url-form input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.url-form button {
+  padding: 14px; font-size: 1rem; font-weight: 600; color: #fff;
+  background: var(--accent); border: 0; border-radius: 10px;
+}
+.url-form button:disabled { opacity: .6; }
+.status { min-height: 1.5em; margin: 12px 0; color: var(--muted); }
+.status.error { color: var(--err); }
+.result h2 { margin: 8px 0 4px; font-size: 1.25rem; line-height: 1.4; }
+.meta { margin: 0 0 16px; color: var(--muted); font-size: .85rem; }
+.body { padding-bottom: 40px; }
+.body p { margin: 0 0 .8em; word-break: keep-all; overflow-wrap: anywhere; }
