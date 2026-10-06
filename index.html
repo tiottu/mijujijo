@@ -27,6 +27,19 @@
     <section id="result" class="result" hidden>
       <h2 id="title"></h2>
       <p id="meta" class="meta"></p>
+      <section id="seo" class="seo">
+        <h3>글 점검 <small>참고용 기준이에요</small></h3>
+        <div class="score-row">
+          <div id="score" class="score">0</div>
+          <div class="score-label">점 / 100</div>
+        </div>
+        <label for="kw">대표 키워드</label>
+        <input id="kw" type="text" autocomplete="off" placeholder="예: 제주도 맛집">
+        <p class="hint">자주 쓴 단어 (누르면 대표 키워드로 입력돼요)</p>
+        <div id="top-words" class="chips"></div>
+        <ul id="seo-items" class="seo-items"></ul>
+      </section>
+
       <button id="check" type="button" class="check-btn">오탈자·문장 검수하기</button>
       <p id="check-status" class="status" role="status" aria-live="polite"></p>
       <div id="issues" class="issues" hidden></div>
@@ -35,6 +48,7 @@
   </main>
 
   <script src="config.js"></script>
+  <script src="seo.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

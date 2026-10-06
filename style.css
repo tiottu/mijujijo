@@ -25,6 +25,29 @@ body {
 .status.error { color: var(--err); }
 .result h2 { margin: 8px 0 4px; font-size: 1.25rem; line-height: 1.4; }
 .meta { margin: 0 0 16px; color: var(--muted); font-size: .85rem; }
+.seo { margin-bottom: 16px; padding: 14px; background: #f9fafb; border: 1px solid var(--line); border-radius: 12px; }
+.seo h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.seo h3 small { color: var(--muted); font-weight: 400; font-size: .75rem; margin-left: 4px; }
+.seo label { display: block; margin-top: 8px; font-weight: 600; font-size: .9rem; }
+.seo input {
+  width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff;
+}
+.score-row { display: flex; align-items: baseline; gap: 6px; }
+.score { font-size: 2.2rem; font-weight: 700; line-height: 1.1; }
+.score.good { color: #15803d; }
+.score.warn { color: #b45309; }
+.score.bad { color: var(--err); }
+.score-label { color: var(--muted); font-size: .85rem; }
+.hint { margin: 10px 0 4px; color: var(--muted); font-size: .8rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-btn {
+  padding: 4px 10px; font-size: .85rem; color: var(--fg); background: #fff;
+  border: 1px solid var(--line); border-radius: 99px;
+}
+.seo-items { list-style: none; margin: 12px 0 0; padding: 0; }
+.seo-item { padding: 8px 0; border-top: 1px solid var(--line); font-size: .92rem; }
+.seo-item strong { display: block; }
+.seo-item span { color: var(--muted); }
 .check-btn {
   width: 100%; padding: 14px; font-size: 1rem; font-weight: 600;
   color: var(--accent); background: #eff6ff; border: 1px solid var(--accent); border-radius: 10px;

@@ -102,11 +102,50 @@
     issuesEl.hidden = false;
   }
 
+  var ICON = { good: "✅", warn: "⚠️", bad: "❌", info: "💡" };
+  var kwInput = $("kw");
+
+  function renderSeo() {
+    if (!current) return;
+    var r = BSeo.analyze(current.post, kwInput.value);
+    $("score").textContent = r.score;
+    $("score").className = "score " + (r.score >= 80 ? "good" : r.score >= 55 ? "warn" : "bad");
+
+    var chips = $("top-words");
+    chips.textContent = "";
+    if (!r.topWords.length) chips.textContent = "반복된 단어가 없어요.";
+    r.topWords.forEach(function (w) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip-btn";
+      b.textContent = w.word + " " + w.count;
+      b.addEventListener("click", function () { kwInput.value = w.word; renderSeo(); });
+      chips.appendChild(b);
+    });
+
+    var list = $("seo-items");
+    list.textContent = "";
+    r.items.forEach(function (it) {
+      var li = document.createElement("li");
+      li.className = "seo-item " + it.status;
+      var name = document.createElement("strong");
+      name.textContent = ICON[it.status] + " " + it.label;
+      var msg = document.createElement("span");
+      msg.textContent = it.msg;
+      li.appendChild(name);
+      li.appendChild(msg);
+      list.appendChild(li);
+    });
+  }
+  kwInput.addEventListener("input", renderSeo);
+
   function show(post) {
     $("title").textContent = post.title || "(제목 없음)";
     $("meta").textContent = post.blogId + " · " + post.paragraphs.length + "문단 · " +
       post.length.toLocaleString() + "자" + (post.truncated ? " (앞부분만 불러옴)" : "");
     renderBody(post, []);
+    kwInput.value = "";
+    renderSeo();
     issuesEl.hidden = true;
     issuesEl.textContent = "";
     setCheckStatus("");
