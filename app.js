@@ -34,7 +34,7 @@
     btn.disabled = true;
     setStatus("글을 불러오는 중...");
 
-    fetch(cfg.SUPABASE_URL + "/functions/v1/fetch-blog", {
+    fetch(cfg.SUPABASE_URL + "/functions/v1/hyper-service", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
