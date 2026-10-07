@@ -22,7 +22,16 @@
 
   function renderKeywordRows(rep) {
     kwRows.textContent = "";
+    var group = "";
     rep.rows.forEach(function (r, i) {
+      // 입력한 키워드 → 그 단어를 포함한 연관 키워드 → 함께 찾는 키워드 순으로 제목을 붙인다.
+      var g = i === 0 && r.keyword === rep.keyword ? "main" : r.related ? "related" : "others";
+      if (g !== group) {
+        group = g;
+        var h = document.createElement("h4");
+        h.textContent = g === "main" ? "입력한 키워드" : g === "related" ? "연관 키워드" : "함께 많이 찾는 키워드";
+        kwRows.appendChild(h);
+      }
       var b = document.createElement("button");
       b.type = "button";
       b.className = "kw-row" + (i === 0 ? " main" : "");
@@ -62,10 +71,10 @@
       });
       kwRows.appendChild(b);
     });
-    if (!rep.hasBlogCounts) {
+    if (rep.hasBlogCounts) {
       var note = document.createElement("p");
       note.className = "hint";
-      note.textContent = "블로그 글 수는 네이버 개발자센터 키를 등록하면 함께 보여 드려요.";
+      note.textContent = "“글 수÷검색수”는 작을수록 검색에 비해 글이 적다는 뜻이고, 참고용 기준이에요.";
       kwRows.appendChild(note);
     }
   }

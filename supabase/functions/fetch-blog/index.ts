@@ -330,7 +330,8 @@ async function callBareun(apiKey, paragraphs) {
 //          NAVER_CLIENT_ID, NAVER_CLIENT_SECRET                         (developers.naver.com, 선택: 블로그 글 수)
 
 const KW_MAX_LEN = 20;
-const KW_ROWS = 15; // 화면에 보여 줄 연관 키워드 수
+const KW_RELATED_ROWS = 15; // 입력한 단어를 포함한 연관 키워드 수
+const KW_OTHER_ROWS = 8; // 그 밖에 함께 찾는 키워드 수
 const KW_BLOG_ROWS = 10; // 이 중 블로그 글 수를 조회할 개수
 
 function cleanKeyword(input) {
@@ -364,8 +365,15 @@ function levelOfCompetition(ratio) {
   return "치열";
 }
 
-// 광고 API 응답 -> 화면용 행. 입력한 키워드를 맨 위에 두고 나머지는 검색수 순.
-function rowsFromAd(list, keyword) {
+// 연관 키워드 판단: 입력한 말을 그대로 포함하거나, 띄어 쓴 여러 단어의 앞 두 글자를 모두 포함하면 연관.
+// (예: "제주도 맛집" -> "제주맛집" 은 "제주"와 "맛집"이 모두 있어서 연관)
+function isRelated(rel, keyword, parts) {
+  if (rel.includes(keyword)) return true;
+  return parts.length >= 2 && parts.every((p) => rel.includes(p.slice(0, 2)));
+}
+
+// 광고 API 응답 -> 화면용 행. 입력한 키워드를 맨 위에 두고, 연관 키워드, 그 밖의 순으로 각각 검색수 순.
+function rowsFromAd(list, keyword, parts = []) {
   const rows = (list || []).map((r) => {
     // 실제 응답의 필드 이름은 monthlyPcQcCnt (문서의 QryCnt 와 다르다). 둘 다 받는다.
     const pc = qcnt(r.monthlyPcQcCnt ?? r.monthlyPcQryCnt), mo = qcnt(r.monthlyMobileQcCnt ?? r.monthlyMobileQryCnt);
@@ -376,13 +384,17 @@ function rowsFromAd(list, keyword) {
       total: pc.n + mo.n,
       low: pc.low && mo.low,
       adCompetition: r.compIdx || "",
+      related: isRelated(String(r.relKeyword), keyword, parts),
     };
   });
-  rows.sort((a, b) => (b.keyword === keyword) - (a.keyword === keyword) || b.total - a.total);
-  return rows.slice(0, KW_ROWS);
+  const byTotal = (a, b) => b.total - a.total;
+  const main = rows.filter((r) => r.keyword === keyword);
+  const related = rows.filter((r) => r.related && r.keyword !== keyword).sort(byTotal).slice(0, KW_RELATED_ROWS);
+  const others = rows.filter((r) => !r.related).sort(byTotal).slice(0, KW_OTHER_ROWS);
+  return [...main, ...related, ...others];
 }
 
-async function fetchKeywordRows(env, keyword) {
+async function fetchKeywordRows(env, keyword, parts) {
   const path = "/keywordstool";
   const ts = String(Date.now());
   const res = await fetch(`https://api.searchad.naver.com${path}?hintKeywords=${encodeURIComponent(keyword)}&showDetail=1`, {
@@ -399,7 +411,7 @@ async function fetchKeywordRows(env, keyword) {
     return { error: `키워드 조회에 실패했습니다. (${res.status})`, detail: body };
   }
   const data = await res.json();
-  return { rows: rowsFromAd(data.keywordList, keyword) };
+  return { rows: rowsFromAd(data.keywordList, keyword, parts) };
 }
 
 async function blogTotal(client, keyword) {
@@ -416,8 +428,8 @@ async function blogTotal(client, keyword) {
   }
 }
 
-async function keywordReport(env, client, keyword) {
-  const r = await fetchKeywordRows(env, keyword);
+async function keywordReport(env, client, keyword, parts = []) {
+  const r = await fetchKeywordRows(env, keyword, parts);
   if (r.error) return r;
   const rows = r.rows;
   if (client) {
@@ -497,7 +509,8 @@ if (typeof Deno !== "undefined") {
       const client = get("NAVER_CLIENT_ID") && get("NAVER_CLIENT_SECRET")
         ? { id: get("NAVER_CLIENT_ID"), secret: get("NAVER_CLIENT_SECRET") }
         : null;
-      const rep = await keywordReport(adEnv, client, kw);
+      const parts = String(payload.keyword).split(/\s+/).map(cleanKeyword).filter(Boolean);
+      const rep = await keywordReport(adEnv, client, kw, parts);
       if (rep.error) return json({ error: rep.error, detail: rep.detail }, 502);
       return json(rep);
     }
