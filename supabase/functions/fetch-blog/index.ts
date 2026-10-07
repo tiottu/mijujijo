@@ -350,6 +350,7 @@ async function adSignature(secret, timestamp, method, path) {
 // 검색수가 10 미만이면 API 가 "< 10" 문자열을 준다. 합계 계산용으로 5 로 두고 표시한다.
 function qcnt(v) {
   if (typeof v === "number") return { n: v, low: false };
+  if (v === undefined || v === null) return { n: 0, low: false }; // 값이 없으면 "10 미만"으로 오해하지 않는다
   const s = String(v);
   if (s.includes("<")) return { n: 5, low: true };
   const n = parseInt(s.replace(/[^\d]/g, ""), 10);
@@ -366,7 +367,8 @@ function levelOfCompetition(ratio) {
 // 광고 API 응답 -> 화면용 행. 입력한 키워드를 맨 위에 두고 나머지는 검색수 순.
 function rowsFromAd(list, keyword) {
   const rows = (list || []).map((r) => {
-    const pc = qcnt(r.monthlyPcQryCnt), mo = qcnt(r.monthlyMobileQryCnt);
+    // 실제 응답의 필드 이름은 monthlyPcQcCnt (문서의 QryCnt 와 다르다). 둘 다 받는다.
+    const pc = qcnt(r.monthlyPcQcCnt ?? r.monthlyPcQryCnt), mo = qcnt(r.monthlyMobileQcCnt ?? r.monthlyMobileQryCnt);
     return {
       keyword: r.relKeyword,
       pc: pc.n,
