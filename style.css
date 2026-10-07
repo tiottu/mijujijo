@@ -65,6 +65,8 @@ body {
   color: var(--accent); background: #eff6ff; border: 1px solid var(--accent); border-radius: 10px;
 }
 .check-btn:disabled { opacity: .6; }
+.check-btn + .check-btn { margin-top: 8px; }
+.check-btn.secondary { color: var(--muted); background: #fff; border-color: var(--line); font-weight: 500; }
 .issues { margin: 8px 0 20px; }
 .issues h3 { margin: 0 0 8px; font-size: 1.05rem; }
 .issue {

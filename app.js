@@ -2,7 +2,7 @@
   var cfg = window.B_CONFIG || {};
   var $ = function (id) { return document.getElementById(id); };
   var form = $("form"), urlInput = $("url"), btn = $("submit"), statusEl = $("status");
-  var result = $("result"), checkBtn = $("check"), checkStatus = $("check-status");
+  var result = $("result"), checkBtn = $("check"), spellBtn = $("spell"), checkStatus = $("check-status");
   var issuesEl = $("issues"), bodyEl = $("body");
   var current = null; // { url, post }
 
@@ -213,14 +213,15 @@
       .then(function () { btn.disabled = false; });
   });
 
-  checkBtn.addEventListener("click", function () {
+  // 맞춤법 검사(spell)와 AI 검수(check)는 같은 화면 형식으로 결과를 보여 준다.
+  function runCheck(action, waitMsg) {
     if (!current) return;
     var snapshot = current;
-    checkBtn.disabled = true;
+    checkBtn.disabled = spellBtn.disabled = true;
     issuesEl.hidden = true;
-    setCheckStatus("AI 가 글을 읽는 중입니다. 길면 30초쯤 걸려요...");
+    setCheckStatus(waitMsg);
 
-    call("check", snapshot.url)
+    call(action, snapshot.url)
       .then(function (data) {
         if (current !== snapshot) return; // 그 사이 다른 글을 불러왔다
         if (!Array.isArray(data.issues)) throw new Error("서버 함수가 예전 버전입니다. 최신 코드로 다시 Deploy 해 주세요.");
@@ -232,6 +233,9 @@
       .catch(function (err) {
         setCheckStatus(err.message || "네트워크 오류가 발생했습니다.", true);
       })
-      .then(function () { checkBtn.disabled = false; });
-  });
+      .then(function () { checkBtn.disabled = spellBtn.disabled = false; });
+  }
+
+  spellBtn.addEventListener("click", function () { runCheck("spell", "맞춤법을 검사하는 중입니다..."); });
+  checkBtn.addEventListener("click", function () { runCheck("check", "AI 가 글을 읽는 중입니다. 길면 30초쯤 걸려요..."); });
 })();

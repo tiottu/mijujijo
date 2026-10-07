@@ -1,4 +1,4 @@
-// 네이버 블로그 글을 가져오고(fetch), 오탈자·문장을 검수(check)하는 Edge Function.
+// 네이버 블로그 글을 가져오고(fetch), 맞춤법을 검사(spell, Bareun)하고, 문장을 AI 로 검수(check)하는 Edge Function.
 // Supabase 대시보드 > Edge Functions > 기존 함수(hyper-service) 편집기에 이 파일 전체를 붙여넣어 Deploy 한다.
 //
 // 요청: POST { "action": "fetch" | "check", "url": "네이버 블로그 글 주소" }  (action 생략 시 fetch)
@@ -246,6 +246,85 @@ async function callClaude(apiKey, model, title, paragraphs) {
   return { issues: normalizeIssues(block.input.issues, paragraphs) };
 }
 
+// ---- 맞춤법 검사 (Bareun.ai) ----
+// Connect RPC 의 JSON 방식: POST https://api.bareun.ai/bareun.RevisionService/CorrectError
+// 키는 Edge Functions > Secrets 의 BAREUN_API_KEY (koba-...). 개인 무료 플랜은 월 5만 단어.
+
+const BAREUN_CATEGORY = {
+  GRAMMER: "문법", WORD: "맞춤법", SPACING: "띄어쓰기", STANDARD: "맞춤법", TYPO: "오타",
+  FOREIGN_WORD: "맞춤법", CONFUSABLE_WORDS: "맞춤법", SENTENCE: "표현", CONFIRM: "맞춤법",
+  1: "문법", 2: "맞춤법", 3: "띄어쓰기", 8: "맞춤법", 9: "오타", 10: "맞춤법", 11: "맞춤법", 12: "표현", 13: "맞춤법",
+};
+
+// Bareun 응답 -> 화면에서 쓰는 issues. 문단 번호는 이어붙인 글에서의 위치로 구한다.
+function bareunToIssues(data, paragraphs) {
+  const starts = [];
+  let pos = 0;
+  for (const p of paragraphs) {
+    starts.push(pos);
+    pos += p.length + 1; // 문단 사이 "\n"
+  }
+  const helps = data.helps || {};
+  const raw = [];
+  for (const b of data.revisedBlocks || []) {
+    const original = b.origin && b.origin.content;
+    const suggestion = b.revised;
+    if (!original || typeof suggestion !== "string") continue;
+
+    const top = (b.revisions || [])[0] || {};
+    const cat = top.category !== undefined ? top.category : "UNKNOWN";
+    if (cat === "THINKING" || cat === 14) continue; // 확정되지 않은 항목
+
+    // 위치로 문단을 정하되, 어긋나면 원문이 들어 있는 첫 문단으로 대신한다.
+    const at = Number(b.origin.beginOffset || 0);
+    let idx = -1;
+    for (let i = 0; i < starts.length; i++) if (at >= starts[i]) idx = i;
+    if (idx < 0 || !paragraphs[idx].includes(original)) idx = paragraphs.findIndex((p) => p.includes(original));
+    if (idx < 0) continue;
+
+    const help = helps[top.helpId] || {};
+    raw.push({
+      paragraph: idx,
+      type: BAREUN_CATEGORY[cat] || "맞춤법",
+      original,
+      suggestion,
+      reason: help.comment || "",
+    });
+  }
+  return normalizeIssues(raw, paragraphs);
+}
+
+async function callBareun(apiKey, paragraphs) {
+  const res = await fetch("https://api.bareun.ai/bareun.RevisionService/CorrectError", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Connect-Protocol-Version": "1",
+      "api-key": apiKey,
+      "Authorization": "Bearer " + apiKey,
+    },
+    body: JSON.stringify({
+      document: { content: paragraphs.join("\n"), language: "ko-KR" },
+      encodingType: "UTF16", // JS 문자열 위치와 같은 단위
+    }),
+  });
+  if (!res.ok) {
+    const body = (await res.text()).slice(0, 300);
+    console.error("bareun error", res.status, body);
+    const msg = res.status === 401 || res.status === 403
+      ? "맞춤법 검사 키를 확인해 주세요."
+      : res.status === 429 ? "맞춤법 검사 사용량을 넘었습니다." : "맞춤법 검사 요청이 실패했습니다.";
+    return { error: `${msg} (${res.status})`, detail: body };
+  }
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    return { error: "맞춤법 검사 응답을 해석하지 못했습니다." };
+  }
+  return { issues: bareunToIssues(data, paragraphs) };
+}
+
 // ---- 서버 ----
 
 function json(body, status = 200) {
@@ -299,7 +378,7 @@ if (typeof Deno !== "undefined") {
       return json({ error: "요청 형식이 올바르지 않습니다." }, 400);
     }
     const action = payload.action || "fetch";
-    if (action !== "fetch" && action !== "check") return json({ error: "알 수 없는 요청입니다." }, 400);
+    if (action !== "fetch" && action !== "check" && action !== "spell") return json({ error: "알 수 없는 요청입니다." }, 400);
 
     const post = await loadPost(payload.url);
     if (post.fail) return json({ error: post.fail[0] }, post.fail[1]);
@@ -324,6 +403,15 @@ if (typeof Deno !== "undefined") {
         if (tr.ok) tags = parseTags(await tr.text());
       } catch { /* 태그 없이 진행 */ }
       return json({ ...base, text, meta: { ...post.meta, tags } });
+    }
+
+    if (action === "spell") {
+      // @ts-ignore
+      const bareunKey = Deno.env.get("BAREUN_API_KEY");
+      if (!bareunKey) return json({ error: "서버에 BAREUN_API_KEY 가 설정되지 않았습니다." }, 500);
+      const s = await callBareun(bareunKey, post.paragraphs);
+      if (s.error) return json({ error: s.error, detail: s.detail }, 502);
+      return json({ ...base, issues: s.issues });
     }
 
     // @ts-ignore
