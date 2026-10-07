@@ -60,6 +60,24 @@ body {
 .detail span { color: var(--fg); font-size: .88rem; word-break: keep-all; overflow-wrap: anywhere; }
 .body p.flash { animation: flash 1.6s ease-out; }
 @keyframes flash { 0%, 40% { background: #fef08a; } 100% { background: transparent; } }
+.kwtool { margin: 12px 0; padding: 12px 14px; background: #f9fafb; border: 1px solid var(--line); border-radius: 12px; }
+.kwtool summary { cursor: pointer; font-weight: 600; }
+.kwtool summary small { color: var(--muted); font-weight: 400; font-size: .75rem; margin-left: 4px; }
+.kw-form { display: flex; gap: 8px; margin-top: 10px; }
+.kw-form input { flex: 1; min-width: 0; padding: 12px; font-size: 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.kw-form button { padding: 0 18px; font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: 10px; }
+.kw-form button:disabled { opacity: .6; }
+.kw-row {
+  display: block; width: 100%; margin-top: 8px; padding: 10px 12px; text-align: left; font: inherit;
+  color: var(--fg); background: #fff; border: 1px solid var(--line); border-radius: 10px;
+}
+.kw-row.main { border-color: var(--accent); }
+.kw-row strong { display: block; }
+.kw-row span { display: block; color: var(--muted); font-size: .85rem; }
+.lv { font-style: normal; font-weight: 600; padding: 0 6px; border-radius: 99px; font-size: .75rem; }
+.lv.여유 { color: #15803d; background: #dcfce7; }
+.lv.보통 { color: #b45309; background: #fef3c7; }
+.lv.치열 { color: var(--err); background: #fee2e2; }
 .check-btn {
   width: 100%; padding: 14px; font-size: 1rem; font-weight: 600;
   color: var(--accent); background: #eff6ff; border: 1px solid var(--accent); border-radius: 10px;

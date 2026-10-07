@@ -24,6 +24,17 @@
 
     <p id="status" class="status" role="status" aria-live="polite"></p>
 
+    <details class="kwtool">
+      <summary>🔎 키워드 조사 <small>월 검색수 · 연관 키워드 · 블로그 글 수</small></summary>
+      <form id="kw-form" class="kw-form">
+        <input id="kw-q" type="text" autocomplete="off" placeholder="예: 제주도 맛집" maxlength="30" required>
+        <button id="kw-go" type="submit">조회</button>
+      </form>
+      <p id="kw-status" class="status" role="status" aria-live="polite"></p>
+      <div id="kw-rows"></div>
+      <p class="hint">월 검색수는 네이버 검색광고 데이터예요. “글 수 ÷ 검색수”는 작을수록 검색에 비해 글이 적다는 뜻이고, 참고용 기준이에요. 항목을 누르면 아래 대표 키워드로 들어가요.</p>
+    </details>
+
     <section id="result" class="result" hidden>
       <h2 id="title"></h2>
       <p id="meta" class="meta"></p>

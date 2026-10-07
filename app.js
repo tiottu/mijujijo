@@ -15,7 +15,85 @@
     checkStatus.className = "status" + (isError ? " error" : "");
   }
 
-  function call(action, url) {
+  // ---- 키워드 조사 ----
+  var kwForm = $("kw-form"), kwQ = $("kw-q"), kwGo = $("kw-go"), kwStatus = $("kw-status"), kwRows = $("kw-rows");
+
+  function n(v) { return Number(v).toLocaleString(); }
+
+  function renderKeywordRows(rep) {
+    kwRows.textContent = "";
+    rep.rows.forEach(function (r, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "kw-row" + (i === 0 ? " main" : "");
+
+      var name = document.createElement("strong");
+      name.textContent = r.keyword;
+
+      var vol = document.createElement("span");
+      vol.textContent = r.low ? "월 검색 10 미만"
+        : "월 검색 " + n(r.total) + " (PC " + n(r.pc) + " · 모바일 " + n(r.mobile) + ")";
+
+      b.appendChild(name);
+      b.appendChild(vol);
+
+      if (r.blogs !== undefined && r.blogs !== null) {
+        var blog = document.createElement("span");
+        blog.textContent = "블로그 글 " + n(r.blogs) + "개" +
+          (r.ratio !== null ? " · 글 수÷검색수 " + r.ratio : "");
+        if (r.level) {
+          var tag = document.createElement("em");
+          tag.className = "lv " + r.level;
+          tag.textContent = r.level;
+          blog.appendChild(document.createTextNode(" "));
+          blog.appendChild(tag);
+        }
+        b.appendChild(blog);
+      }
+      if (r.adCompetition) {
+        var ad = document.createElement("span");
+        ad.textContent = "광고 경쟁 " + r.adCompetition;
+        b.appendChild(ad);
+      }
+      b.addEventListener("click", function () {
+        $("kw").value = r.keyword;
+        renderSeo();
+        $("seo").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      kwRows.appendChild(b);
+    });
+    if (!rep.hasBlogCounts) {
+      var note = document.createElement("p");
+      note.className = "hint";
+      note.textContent = "블로그 글 수는 네이버 개발자센터 키를 등록하면 함께 보여 드려요.";
+      kwRows.appendChild(note);
+    }
+  }
+
+  kwForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
+      kwStatus.textContent = "config.js 에 Supabase 주소와 키를 먼저 넣어 주세요.";
+      kwStatus.className = "status error";
+      return;
+    }
+    kwGo.disabled = true;
+    kwRows.textContent = "";
+    kwStatus.className = "status";
+    kwStatus.textContent = "조회하는 중...";
+    callApi({ action: "keywords", keyword: kwQ.value })
+      .then(function (rep) {
+        kwStatus.textContent = rep.rows.length ? "" : "조회된 키워드가 없어요.";
+        renderKeywordRows(rep);
+      })
+      .catch(function (err) {
+        kwStatus.textContent = err.message || "네트워크 오류가 발생했습니다.";
+        kwStatus.className = "status error";
+      })
+      .then(function () { kwGo.disabled = false; });
+  });
+
+  function callApi(payload) {
     return fetch(cfg.SUPABASE_URL + "/functions/v1/hyper-service", {
       method: "POST",
       headers: {
@@ -23,7 +101,7 @@
         "Authorization": "Bearer " + cfg.SUPABASE_ANON_KEY,
         "apikey": cfg.SUPABASE_ANON_KEY
       },
-      body: JSON.stringify({ action: action, url: url })
+      body: JSON.stringify(payload)
     })
       .then(function (res) {
         return res.json().then(function (data) { return { ok: res.ok, data: data }; });
@@ -32,6 +110,10 @@
         if (!r.ok) throw new Error(r.data.error || "요청에 실패했습니다.");
         return r.data;
       });
+  }
+
+  function call(action, url) {
+    return callApi({ action: action, url: url });
   }
 
   // 문단 안에서 틀린 부분에 표시를 한다. 같은 위치가 겹치면 먼저 나온 것만 쓴다.

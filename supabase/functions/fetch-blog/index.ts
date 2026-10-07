@@ -325,6 +325,111 @@ async function callBareun(apiKey, paragraphs) {
   return { issues: bareunToIssues(data, paragraphs) };
 }
 
+// ---- 키워드 조사 (네이버 검색광고 API + 검색 API) ----
+// Secrets: NAVER_AD_CUSTOMER_ID, NAVER_AD_API_KEY, NAVER_AD_SECRET_KEY  (검색광고 > 도구 > API 사용 관리)
+//          NAVER_CLIENT_ID, NAVER_CLIENT_SECRET                         (developers.naver.com, 선택: 블로그 글 수)
+
+const KW_MAX_LEN = 20;
+const KW_ROWS = 15; // 화면에 보여 줄 연관 키워드 수
+const KW_BLOG_ROWS = 10; // 이 중 블로그 글 수를 조회할 개수
+
+function cleanKeyword(input) {
+  const k = String(input || "").replace(/\s+/g, "").replace(/[^0-9A-Za-z가-힣]/g, "");
+  return k.length >= 1 && k.length <= KW_MAX_LEN ? k : null;
+}
+
+async function adSignature(secret, timestamp, method, path) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(`${timestamp}.${method}.${path}`));
+  let bin = "";
+  for (const b of new Uint8Array(sig)) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+// 검색수가 10 미만이면 API 가 "< 10" 문자열을 준다. 합계 계산용으로 5 로 두고 표시한다.
+function qcnt(v) {
+  if (typeof v === "number") return { n: v, low: false };
+  const s = String(v);
+  if (s.includes("<")) return { n: 5, low: true };
+  const n = parseInt(s.replace(/[^\d]/g, ""), 10);
+  return Number.isFinite(n) ? { n, low: false } : { n: 5, low: true };
+}
+
+function levelOfCompetition(ratio) {
+  if (ratio === null) return null;
+  if (ratio <= 5) return "여유";
+  if (ratio <= 20) return "보통";
+  return "치열";
+}
+
+// 광고 API 응답 -> 화면용 행. 입력한 키워드를 맨 위에 두고 나머지는 검색수 순.
+function rowsFromAd(list, keyword) {
+  const rows = (list || []).map((r) => {
+    const pc = qcnt(r.monthlyPcQryCnt), mo = qcnt(r.monthlyMobileQryCnt);
+    return {
+      keyword: r.relKeyword,
+      pc: pc.n,
+      mobile: mo.n,
+      total: pc.n + mo.n,
+      low: pc.low && mo.low,
+      adCompetition: r.compIdx || "",
+    };
+  });
+  rows.sort((a, b) => (b.keyword === keyword) - (a.keyword === keyword) || b.total - a.total);
+  return rows.slice(0, KW_ROWS);
+}
+
+async function fetchKeywordRows(env, keyword) {
+  const path = "/keywordstool";
+  const ts = String(Date.now());
+  const res = await fetch(`https://api.searchad.naver.com${path}?hintKeywords=${encodeURIComponent(keyword)}&showDetail=1`, {
+    headers: {
+      "X-Timestamp": ts,
+      "X-API-KEY": env.apiKey,
+      "X-Customer": env.customerId,
+      "X-Signature": await adSignature(env.secretKey, ts, "GET", path),
+    },
+  });
+  if (!res.ok) {
+    const body = (await res.text()).slice(0, 300);
+    console.error("searchad error", res.status, body);
+    return { error: `키워드 조회에 실패했습니다. (${res.status})`, detail: body };
+  }
+  const data = await res.json();
+  return { rows: rowsFromAd(data.keywordList, keyword) };
+}
+
+async function blogTotal(client, keyword) {
+  try {
+    const res = await fetch(
+      `https://openapi.naver.com/v1/search/blog.json?query=${encodeURIComponent(keyword)}&display=1`,
+      { headers: { "X-Naver-Client-Id": client.id, "X-Naver-Client-Secret": client.secret } },
+    );
+    if (!res.ok) return null;
+    const d = await res.json();
+    return typeof d.total === "number" ? d.total : null;
+  } catch {
+    return null;
+  }
+}
+
+async function keywordReport(env, client, keyword) {
+  const r = await fetchKeywordRows(env, keyword);
+  if (r.error) return r;
+  const rows = r.rows;
+  if (client) {
+    const totals = await Promise.all(rows.slice(0, KW_BLOG_ROWS).map((x) => blogTotal(client, x.keyword)));
+    totals.forEach((t, i) => {
+      rows[i].blogs = t;
+      // 글 수 ÷ 월 검색수: 작을수록 검색에 비해 글이 적다는 뜻 (참고용)
+      rows[i].ratio = t !== null && rows[i].total > 0 ? Math.round((t / rows[i].total) * 10) / 10 : null;
+      rows[i].level = levelOfCompetition(rows[i].ratio);
+    });
+  }
+  return { keyword, rows, hasBlogCounts: !!client };
+}
+
 // ---- 서버 ----
 
 function json(body, status = 200) {
@@ -378,6 +483,22 @@ if (typeof Deno !== "undefined") {
       return json({ error: "요청 형식이 올바르지 않습니다." }, 400);
     }
     const action = payload.action || "fetch";
+    if (action === "keywords") {
+      const kw = cleanKeyword(payload.keyword);
+      if (!kw) return json({ error: `키워드는 한글·영문·숫자 ${KW_MAX_LEN}자 이내로 입력해 주세요.` }, 400);
+      // @ts-ignore
+      const get = (n) => Deno.env.get(n);
+      const adEnv = { customerId: get("NAVER_AD_CUSTOMER_ID"), apiKey: get("NAVER_AD_API_KEY"), secretKey: get("NAVER_AD_SECRET_KEY") };
+      if (!adEnv.customerId || !adEnv.apiKey || !adEnv.secretKey) {
+        return json({ error: "서버에 네이버 검색광고 키(NAVER_AD_CUSTOMER_ID, NAVER_AD_API_KEY, NAVER_AD_SECRET_KEY)가 설정되지 않았습니다." }, 500);
+      }
+      const client = get("NAVER_CLIENT_ID") && get("NAVER_CLIENT_SECRET")
+        ? { id: get("NAVER_CLIENT_ID"), secret: get("NAVER_CLIENT_SECRET") }
+        : null;
+      const rep = await keywordReport(adEnv, client, kw);
+      if (rep.error) return json({ error: rep.error, detail: rep.detail }, 502);
+      return json(rep);
+    }
     if (action !== "fetch" && action !== "check" && action !== "spell") return json({ error: "알 수 없는 요청입니다." }, 400);
 
     const post = await loadPost(payload.url);
